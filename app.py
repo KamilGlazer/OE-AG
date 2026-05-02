@@ -12,14 +12,13 @@ from functions import AVAILABLE_FUNCTIONS
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Algorytm Genetyczny - Projekt 1")
+        self.title("Algorytm genetyczny")
         self.geometry("1100x700")
         
         self._build_ui()
         
     def _build_ui(self):
-        # Left Panel (Controls)
-        control_frame = ttk.LabelFrame(self, text="Konfiguracja Parametrów")
+        control_frame = ttk.LabelFrame(self, text="Konfiguracja parametrów")
         control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
         
         row = 0
@@ -42,22 +41,22 @@ class App(tk.Tk):
         entries = {}
         combos = {}
         
-        add_combo("Funkcja Testowa", list(AVAILABLE_FUNCTIONS.keys()), list(AVAILABLE_FUNCTIONS.keys())[0])
-        add_combo("Rodzaj Optymalizacji", ["Min", "Max"], "Min")
-        add_entry("Liczba Zmiennych", "2")
-        add_entry("Dziedzina (min)", "-10.0")
-        add_entry("Dziedzina (max)", "10.0")
-        add_entry("Dokładność (miejsca po przecinku)", "3")
-        add_entry("Wielkość Populacji", "100")
-        add_entry("Liczba Epok", "200")
-        add_combo("Metoda Selekcji", ["Najlepszych", "Turniejowa", "Ruletki"], "Turniejowa")
-        add_entry("Rozmiar Turnieju / % Najlepszych", "3") # Reused depends on selection
-        add_combo("Rodzaj Krzyżowania", ["Jednopunktowe", "Dwupunktowe", "Jednorodne", "Ziarniste"], "Jednopunktowe")
-        add_entry("Prawd. Krzyżowania (0-1)", "0.8")
-        add_combo("Rodzaj Mutacji", ["Brzegowa", "Jednopunktowa", "Dwupunktowa"], "Jednopunktowa")
-        add_entry("Prawd. Mutacji (0-1)", "0.05")
-        add_entry("Prawd. Inwersji (0-1)", "0.02")
-        add_entry("Liczba elit (Elityzm)", "1")
+        add_combo("Funkcja", list(AVAILABLE_FUNCTIONS.keys()), list(AVAILABLE_FUNCTIONS.keys())[0])
+        add_combo("Rodzaj optymalizacji", ["Min", "Max"], "Min")
+        add_entry("Liczba zmiennych", "2")
+        add_entry("Min", "-10.0")
+        add_entry("Max", "10.0")
+        add_entry("Liczba miejsc po przecinku", "3")
+        add_entry("Populacja", "100")
+        add_entry("Liczba epok", "200")
+        add_combo("Metoda selekcji", ["Najlepszych", "Turniejowa", "Ruletki"], "Turniejowa")
+        add_entry("Rozmiar turnieju", "3")
+        add_combo("Rodzaj krzyżowania", ["Jednopunktowe", "Dwupunktowe", "Jednorodne", "Ziarniste"], "Jednopunktowe")
+        add_entry("Prawdopodobieństwo krzyżowania", "0.8")
+        add_combo("Rodzaj mutacji", ["Brzegowa", "Jednopunktowa", "Dwupunktowa"], "Jednopunktowa")
+        add_entry("Prawdopodobieństwo mutacji", "0.05")
+        add_entry("Prawdopodobieństwo inwersji", "0.02")
+        add_entry("Liczba elit", "1")
         
         self.entries = entries
         self.combos = combos
@@ -65,17 +64,16 @@ class App(tk.Tk):
         btn_frame = ttk.Frame(control_frame)
         btn_frame.grid(row=row, column=0, columnspan=2, pady=10)
         
-        self.btn_run = ttk.Button(btn_frame, text="Uruchom Algorytm", command=self.run_algorithm)
+        self.btn_run = ttk.Button(btn_frame, text="Uruchom", command=self.run_algorithm)
         self.btn_run.pack(side=tk.LEFT, padx=5)
         
         self.btn_export = ttk.Button(btn_frame, text="Eksportuj do CSV", command=self.export_csv, state=tk.DISABLED)
         self.btn_export.pack(side=tk.LEFT, padx=5)
-        
-        # Right Panel (Chart & Results)
+
         right_frame = ttk.Frame(self)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        self.res_lbl = ttk.Label(right_frame, text="Wyniki będą tutaj...", font=("Helvetica", 11))
+        self.res_lbl = ttk.Label(right_frame, text="", font=("Helvetica", 11))
         self.res_lbl.pack(side=tk.TOP, fill=tk.X, pady=5)
         
         self.fig, self.ax = plt.subplots(figsize=(7, 5))
@@ -90,26 +88,26 @@ class App(tk.Tk):
             
     def run_algorithm(self):
         try:
-            func_name = self.combos["Funkcja Testowa"].get()
-            opt_type = self.combos["Rodzaj Optymalizacji"].get()
-            num_vars = self.get_val("Liczba Zmiennych", int)
-            domain_min = self.get_val("Dziedzina (min)", float)
-            domain_max = self.get_val("Dziedzina (max)", float)
-            precision = self.get_val("Dokładność (miejsca po przecinku)", int)
-            pop_size = self.get_val("Wielkość Populacji", int)
-            epochs = self.get_val("Liczba Epok", int)
+            func_name = self.combos["Funkcja"].get()
+            opt_type = self.combos["Rodzaj optymalizacji"].get()
+            num_vars = self.get_val("Liczba zmiennych", int)
+            domain_min = self.get_val("Min", float)
+            domain_max = self.get_val("Max", float)
+            precision = self.get_val("Liczba miejsc po przecinku", int)
+            pop_size = self.get_val("Populacja", int)
+            epochs = self.get_val("Liczba epok", int)
             
-            sel_method = self.combos["Metoda Selekcji"].get()
-            tour_size_or_pct = self.get_val("Rozmiar Turnieju / % Najlepszych", float)
+            sel_method = self.combos["Metoda selekcji"].get()
+            tour_size_or_pct = self.get_val("Rozmiar turnieju", float)
             
-            cross_method = self.combos["Rodzaj Krzyżowania"].get()
-            cross_prob = self.get_val("Prawd. Krzyżowania (0-1)", float)
+            cross_method = self.combos["Rodzaj krzyżowania"].get()
+            cross_prob = self.get_val("Prawdopodobieństwo krzyżowania", float)
             
-            mut_method = self.combos["Rodzaj Mutacji"].get()
-            mut_prob = self.get_val("Prawd. Mutacji (0-1)", float)
+            mut_method = self.combos["Rodzaj mutacji"].get()
+            mut_prob = self.get_val("Prawdopodobieństwo mutacji", float)
             
-            inv_prob = self.get_val("Prawd. Inwersji (0-1)", float)
-            elitism = self.get_val("Liczba elit (Elityzm)", int)
+            inv_prob = self.get_val("Prawdopodobieństwo inwersji", float)
+            elitism = self.get_val("Liczba elit", int)
             
         except ValueError as e:
             messagebox.showerror("Błąd konfiguracji", str(e))
@@ -141,7 +139,6 @@ class App(tk.Tk):
             return
             
         self.btn_run.config(state=tk.DISABLED)
-        self.res_lbl.config(text="Obliczanie...")
         
         def worker():
             start_time = time.time()
@@ -153,17 +150,16 @@ class App(tk.Tk):
                 
                 self.after(0, self.update_results, ga, end_time - start_time)
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("Błąd", f"Błąd w trakcie wykonywania:\n{e}"))
+                self.after(0, lambda: messagebox.showerror("Błąd", f"Błąd:\n{e}"))
                 self.after(0, lambda: self.btn_run.config(state=tk.NORMAL))
-                self.after(0, lambda: self.res_lbl.config(text="Błąd!"))
+                self.after(0, lambda: self.res_lbl.config(text="Błąd"))
             
         threading.Thread(target=worker, daemon=True).start()
 
     def update_results(self, ga, duration):
         best_val = ga.best_solution_ever.objective_val
         best_vars = [round(x, 5) for x in ga.best_solution_ever.real_values]
-        
-        # Format the parameters string nicely
+
         if len(best_vars) > 10:
             formatted_vars = str(best_vars[:10])[:-1] + ", ...]"
         else:
@@ -176,10 +172,9 @@ class App(tk.Tk):
         
         self.ax.clear()
         epochs_range = range(len(ga.best_history))
-        self.ax.plot(epochs_range, ga.best_history, label="Najlepszy (Best)", color="green")
-        self.ax.plot(epochs_range, ga.avg_history, label="Średnio (Average)", color="blue")
-        # Można odkomentować aby rysować 'Najgorszy':
-        # self.ax.plot(epochs_range, ga.worst_history, label="Najgorszy (Worst)", color="red")
+        self.ax.plot(epochs_range, ga.best_history, label="Najlepszy", color="green")
+        self.ax.plot(epochs_range, ga.avg_history, label="Średni", color="blue")
+        #self.ax.plot(epochs_range, ga.worst_history, label="Najgorszy", color="red")
         
         self.ax.set_title("Wartość funkcji celu w kolejnych epokach")
         self.ax.set_xlabel("Epoka")
@@ -202,7 +197,7 @@ class App(tk.Tk):
                 writer.writerow(["Epoka", "Najlepszy", "Sredni", "Najgorszy"])
                 for ep, (b, a, w) in enumerate(zip(self.last_ga.best_history, self.last_ga.avg_history, self.last_ga.worst_history)):
                     writer.writerow([ep, b, a, w])
-            messagebox.showinfo("Eksport", "Pomyślnie zapisano do pliku CSV.")
+            messagebox.showinfo("Eksport", "Pomyślnie zapisano")
 
 if __name__ == "__main__":
     app = App()
