@@ -6,13 +6,13 @@ import threading
 import time
 import csv
 
-from ga_core import GeneticAlgorithm
+from ga_core import RealGeneticAlgorithm
 from functions import AVAILABLE_FUNCTIONS
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Algorytm genetyczny")
+        self.title("Algorytm genetyczny — chromosom rzeczywisty (P2)")
         self.geometry("1100x700")
         
         self._build_ui()
@@ -46,14 +46,19 @@ class App(tk.Tk):
         add_entry("Liczba zmiennych", "2")
         add_entry("Min", "-10.0")
         add_entry("Max", "10.0")
-        add_entry("Liczba miejsc po przecinku", "3")
+        add_entry("Wyświetlanie miejsc po przecinku", "5")
         add_entry("Populacja", "100")
         add_entry("Liczba epok", "200")
         add_combo("Metoda selekcji", ["Najlepszych", "Turniejowa", "Ruletki"], "Turniejowa")
-        add_entry("Rozmiar turnieju", "3")
-        add_combo("Rodzaj krzyżowania", ["Jednopunktowe", "Dwupunktowe", "Jednorodne", "Ziarniste"], "Jednopunktowe")
+        add_entry("Rozmiar turnieju / % najlepszych", "3")
+        add_combo(
+            "Rodzaj krzyżowania",
+            ["Arytmetyczne", "Liniowe", "Mieszające alfa", "Alfa-beta", "Uśredniające"],
+            "Arytmetyczne",
+        )
         add_entry("Prawdopodobieństwo krzyżowania", "0.8")
-        add_combo("Rodzaj mutacji", ["Brzegowa", "Jednopunktowa", "Dwupunktowa"], "Jednopunktowa")
+        add_combo("Rodzaj mutacji", ["Równomierna", "Gaussa"], "Równomierna")
+        add_entry("Sigma mutacji Gaussa (ułamek szerokości dziedziny)", "0.1")
         add_entry("Prawdopodobieństwo mutacji", "0.05")
         add_entry("Prawdopodobieństwo inwersji", "0.02")
         add_entry("Liczba elit", "1")
@@ -93,17 +98,18 @@ class App(tk.Tk):
             num_vars = self.get_val("Liczba zmiennych", int)
             domain_min = self.get_val("Min", float)
             domain_max = self.get_val("Max", float)
-            precision = self.get_val("Liczba miejsc po przecinku", int)
+            display_decimals = self.get_val("Wyświetlanie miejsc po przecinku", int)
             pop_size = self.get_val("Populacja", int)
             epochs = self.get_val("Liczba epok", int)
             
             sel_method = self.combos["Metoda selekcji"].get()
-            tour_size_or_pct = self.get_val("Rozmiar turnieju", float)
+            tour_size_or_pct = self.get_val("Rozmiar turnieju / % najlepszych", float)
             
             cross_method = self.combos["Rodzaj krzyżowania"].get()
             cross_prob = self.get_val("Prawdopodobieństwo krzyżowania", float)
             
             mut_method = self.combos["Rodzaj mutacji"].get()
+            gauss_sigma_frac = self.get_val("Sigma mutacji Gaussa (ułamek szerokości dziedziny)", float)
             mut_prob = self.get_val("Prawdopodobieństwo mutacji", float)
             
             inv_prob = self.get_val("Prawdopodobieństwo inwersji", float)
@@ -115,12 +121,18 @@ class App(tk.Tk):
             
         fitness_fn = AVAILABLE_FUNCTIONS[func_name]
         
+        def best_sel_from_entry(v):
+            if sel_method != "Najlepszych":
+                return 0.2
+            if v > 1.0:
+                return min(1.0, v / 100.0)
+            return min(1.0, max(0.01, v))
+
         try:
-            ga = GeneticAlgorithm(
+            ga = RealGeneticAlgorithm(
                 fitness_func=fitness_fn,
                 num_vars=num_vars,
                 domain=(domain_min, domain_max),
-                precision_decimals=precision,
                 pop_size=pop_size,
                 epochs=epochs,
                 prob_cross=cross_prob,
@@ -131,8 +143,9 @@ class App(tk.Tk):
                 crossover_method=cross_method,
                 mutation_method=mut_method,
                 opt_type=opt_type,
-                tournament_size=int(tour_size_or_pct) if sel_method=="Turniejowa" else 3,
-                best_sel_percent=tour_size_or_pct/100.0 if sel_method=="Najlepszych" and tour_size_or_pct > 1 else (tour_size_or_pct if sel_method=="Najlepszych" else 0.2)
+                tournament_size=int(tour_size_or_pct) if sel_method == "Turniejowa" else 3,
+                best_sel_percent=best_sel_from_entry(tour_size_or_pct),
+                gaussian_sigma_frac=max(1e-9, gauss_sigma_frac),
             )
         except Exception as e:
             messagebox.showerror("Błąd inicjalizacji GA", str(e))
@@ -148,7 +161,7 @@ class App(tk.Tk):
                 
                 self.last_ga = ga
                 
-                self.after(0, self.update_results, ga, end_time - start_time)
+                self.after(0, self.update_results, ga, end_time - start_time, display_decimals)
             except Exception as e:
                 self.after(0, lambda: messagebox.showerror("Błąd", f"Błąd:\n{e}"))
                 self.after(0, lambda: self.btn_run.config(state=tk.NORMAL))
@@ -156,9 +169,10 @@ class App(tk.Tk):
             
         threading.Thread(target=worker, daemon=True).start()
 
-    def update_results(self, ga, duration):
+    def update_results(self, ga, duration, display_decimals=5):
         best_val = ga.best_solution_ever.objective_val
-        best_vars = [round(x, 5) for x in ga.best_solution_ever.real_values]
+        d = max(0, min(12, int(display_decimals)))
+        best_vars = [round(x, d) for x in ga.best_solution_ever.real_values]
 
         if len(best_vars) > 10:
             formatted_vars = str(best_vars[:10])[:-1] + ", ...]"
